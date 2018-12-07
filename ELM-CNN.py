@@ -80,7 +80,6 @@ def conv3Dlayer(feature_maps, number_of_kernel, size_kernel):
                                  feature_maps.shape[2] - size_kernel + 1))
     for k in range(0, number_of_kernel):
         kernel = np.random.rand(n_feature, size_kernel, size_kernel)
-        kernel = np.ceil(kernel)
         for i in range(0, feature_maps.shape[1] - size_kernel + 1):
             for j in range(0, feature_maps.shape[2] - size_kernel + 1):
                 new_feature_maps[k][i][j] = np.sum(
@@ -88,8 +87,26 @@ def conv3Dlayer(feature_maps, number_of_kernel, size_kernel):
     return new_feature_maps
 
 
-########################################################################################################################
+def pool3Dlayer(feature_maps, pool_size):
+    """
+    :param feature_maps: 3D matric containing all the feature maps from a layer
+    :param pool_size: number of elements to count for each row and column in the pool
+    :return: 3D matrix of the pooled input map
+    """
+    new_feature_maps = np.zeros((feature_maps.shape[0], int(feature_maps.shape[1] / pool_size),
+                                 int(feature_maps.shape[2] / pool_size)))
+    for k in range(0, feature_maps.shape[0]):
+        for i in range(0, int(feature_maps.shape[1] / pool_size)):
+            for j in range(0, int(feature_maps.shape[2] / pool_size)):
+                new_feature_maps[k][i][j] = feature_maps[k, i * pool_size:i * pool_size + pool_size,
+                                                         j * pool_size:j * pool_size + pool_size].max()
+    return new_feature_maps
 
+
+########################################################################################################################
+"""
+manca la regolarizzazione nel calcolo della pseudo-inversa
+"""
 X_train, y_train, X_test, y_test = load_CIFAR10_dataset()
 
 # Plot one image from CIFAR_10
@@ -98,7 +115,8 @@ rgb_rolled = np.rollaxis(rgb, 0, 3)
 plt.imshow(rgb_rolled)
 
 # normalizing features on a distribution with mean 0.0 and variance 1.0
-X = X_train
+X_train = X_train.astype(float)
+X_test = X_test.astype(float)
 X_train = preprocessing.scale(X_train)
 X_test = preprocessing.scale(X_test)
 
@@ -112,10 +130,12 @@ Y_train = vectorize_class_labels(y_train, n_classes)
 Y_test = vectorize_class_labels(y_test, n_classes)
 
 # Training the ELM
-Win, Wout, H = train_network(X_train, Y_train, n_hidden_neurons)
+Theta1, Theta2, H = train_network(X_train, Y_train, n_hidden_neurons)
 
-Out = predict(X_test, Win, Wout)
-accuracy = compute_accuracy(Out, Y_test)
-print("Accuracy: ", accuracy, "%")
+Out_train = predict(X_train, Theta1, Theta2)
+Out_test = predict(X_test, Theta1, Theta2)
+accuracy_train = compute_accuracy(Out_train, Y_train)
+accuracy_test = compute_accuracy(Out_test, Y_test)
+print("Accuracy (TRAINING): ", accuracy_train, "%\nAccuracy (TEST): ", accuracy_test, "%")
 
 ########################################################################################################################
